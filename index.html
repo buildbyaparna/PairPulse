@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pair Pulse</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <p class="eyebrow">Technical Bias Engine</p>
+        <div class="brand-lockup">
+          <img class="brand-logo" src="./logo.svg" alt="Pair Pulse logo">
+          <h1>Pair Pulse</h1>
+        </div>
+      </div>
+      <a
+        class="ghost-button support-button"
+        href="#"
+        id="support-link"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <span class="support-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false">
+            <path d="M5 7h11a1 1 0 0 1 1 1v2a3 3 0 0 0 0 6h-1.1A5 5 0 0 1 11 20H8a5 5 0 0 1-5-5V8a1 1 0 0 1 1-1h1zm12 3V9H5v6a3 3 0 0 0 3 3h3a3 3 0 0 0 3-3v-1h2a1 1 0 0 0 0-2h-1v-2h2z" fill="currentColor"/>
+            <path d="M9 4c0 1-.7 1.5-1.2 1.9C7.3 6.3 7 6.6 7 7h1.5c0-.9.5-1.3 1-1.7.6-.5 1.5-1.2 1.5-2.3H9zm4 0c0 1-.7 1.5-1.2 1.9-.5.4-.8.7-.8 1.1h1.5c0-.9.5-1.3 1-1.7.6-.5 1.5-1.2 1.5-2.3H13z" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="support-label">Buy Me a Coffee</span>
+      </a>
+    </header>
+
+    <main class="dashboard">
+      <section class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Real-Time Ranking</p>
+          <h2 id="hero-headline">Loading market bias...</h2>
+          <p id="hero-subtext" class="hero-subtext">
+            Score uses EMA trend, RSI momentum, ADX strength, and price action on 15m, 1h, 4h, 12h, and 24h.
+          </p>
+        </div>
+        <div class="search-shell">
+          <label class="search-field">
+            <span class="search-label">Search Pair</span>
+            <div class="search-control">
+              <input id="search-input" type="search" placeholder="BTCUSD, ETHUSD, XRPUSD...">
+              <button id="search-button" class="ghost-button search-button" type="button">Search</button>
+            </div>
+          </label>
+          <div id="search-suggestions" class="search-suggestions"></div>
+        </div>
+        <div class="meta-row">
+          <article class="meta-card">
+            <span class="meta-label">Tracked Pairs</span>
+            <strong id="tracked-pairs">0</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Bullish</span>
+            <strong id="bullish-count">0</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Bearish</span>
+            <strong id="bearish-count">0</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Neutral</span>
+            <strong id="neutral-count">0</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Updated</span>
+            <strong id="last-refresh">Waiting</strong>
+          </article>
+        </div>
+        <div class="hero-highlights">
+          <article class="panel spotlight bull-panel">
+            <p class="eyebrow">Strongest Bull</p>
+            <h3 id="strongest-bull-symbol">--</h3>
+            <p id="strongest-bull-meta" class="spotlight-meta">Waiting for data</p>
+            <div id="strongest-bull-bias" class="bias-pill neutral">Neutral</div>
+          </article>
+
+          <article class="panel spotlight bear-panel">
+            <p class="eyebrow">Strongest Bear</p>
+            <h3 id="strongest-bear-symbol">--</h3>
+            <p id="strongest-bear-meta" class="spotlight-meta">Waiting for data</p>
+            <div id="strongest-bear-bias" class="bias-pill neutral">Neutral</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel list-panel">
+          <div class="panel-head">
+            <p class="eyebrow">Major Pairs</p>
+          </div>
+          <div id="majors-grid" class="majors-grid"></div>
+        </article>
+
+        <article class="panel list-panel">
+          <div class="panel-head">
+            <p class="eyebrow">Best Long Setups</p>
+          </div>
+          <div id="bull-list" class="signal-list"></div>
+        </article>
+
+        <article class="panel list-panel">
+          <div class="panel-head">
+            <p class="eyebrow">Best Short Setups</p>
+          </div>
+          <div id="bear-list" class="signal-list"></div>
+        </article>
+      </section>
+
+      <section class="panel ranking-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">All Pairs</p>
+            <h3 class="ranking-title">Searchable Bias Ranking</h3>
+          </div>
+          <span id="results-note" class="mini-note">0 results</span>
+        </div>
+        <div class="ranking-legend">
+          <span>Bias timeframes: 15m, 1h, 4h, 12h, 24h. Data refreshes continuously from live market data.</span>
+        </div>
+        <div id="ranking-list" class="ranking-list"></div>
+      </section>
+
+      <section id="loading-state" class="loading-state">
+        <div class="loader"></div>
+        <p>Building all-pairs technical ranking...</p>
+      </section>
+
+      <section id="empty-state" class="empty-state hidden">
+        <h3>Data unavailable.</h3>
+        <p>Start the local server and refresh.</p>
+      </section>
+
+      <section id="pair-modal" class="pair-modal hidden" aria-hidden="true">
+        <div class="pair-modal-card">
+          <div class="pair-modal-head">
+            <div>
+              <p class="eyebrow">Pair Detail</p>
+              <h3 id="pair-modal-symbol" class="pair-modal-symbol">--</h3>
+              <p id="pair-modal-meta" class="pair-modal-meta">Waiting for data</p>
+            </div>
+            <button id="pair-modal-close" class="ghost-button close-button" type="button">Close</button>
+          </div>
+          <div class="pair-modal-badges">
+            <span id="pair-modal-bias" class="bias-pill neutral">Neutral</span>
+            <span id="pair-modal-readiness" class="readiness-pill wait">Wait</span>
+            <span id="pair-modal-score" class="score-pill">Score 0</span>
+          </div>
+          <div id="pair-modal-timeframes" class="pair-modal-timeframes"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer panel">
+      <p class="footer-copy">
+        Built by
+        <a href="https://www.linkedin.com/in/aparnagaikwadofficial/" target="_blank" rel="noreferrer">Aparna Gaikwad</a>.
+        Developed in 2026.
+      </p>
+      <p class="footer-copy">
+        Disclaimer: This dashboard is for technical analysis and educational use only. It is not financial advice, investment advice, or a trade recommendation.
+      </p>
+    </footer>
+  </div>
+
+  <template id="major-card-template">
+    <article class="major-card">
+      <div class="major-head">
+        <strong class="major-symbol"></strong>
+        <span class="major-price"></span>
+      </div>
+      <div class="major-badges">
+        <span class="readiness-pill"></span>
+        <span class="bias-pill"></span>
+        <span class="score-wrap">
+          <span class="score-pill"></span>
+          <span class="score-info" aria-hidden="true">i</span>
+        </span>
+      </div>
+      <div class="timeframe-row"></div>
+    </article>
+  </template>
+
+  <template id="signal-row-template">
+    <article class="signal-row">
+      <div>
+        <strong class="signal-symbol"></strong>
+        <p class="signal-meta"></p>
+      </div>
+      <div class="signal-side">
+        <span class="readiness-pill"></span>
+        <span class="bias-pill"></span>
+        <span class="score-wrap">
+          <span class="score-pill"></span>
+          <span class="score-info" aria-hidden="true">i</span>
+        </span>
+      </div>
+    </article>
+  </template>
+
+  <template id="ranking-row-template">
+    <article class="ranking-row">
+      <div class="ranking-main">
+        <div class="rank-pill"></div>
+        <div class="ranking-copy">
+          <strong class="ranking-symbol"></strong>
+          <p class="ranking-meta"></p>
+        </div>
+      </div>
+      <div class="ranking-side">
+        <div class="ranking-timeframes"></div>
+        <span class="readiness-pill"></span>
+        <span class="bias-pill"></span>
+        <span class="score-wrap">
+          <span class="score-pill"></span>
+          <span class="score-info" aria-hidden="true">i</span>
+        </span>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
