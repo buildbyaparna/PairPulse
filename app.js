@@ -146,6 +146,15 @@ function formatPrice(value) {
   return numeric.toLocaleString("en-US", { maximumFractionDigits: 8 });
 }
 
+function formatSignedScore(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "N/A";
+  }
+
+  return `${numeric > 0 ? "+" : ""}${numeric}`;
+}
+
 function formatPotentialRatio(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -177,7 +186,7 @@ function formatSetupPlan(row) {
     return setupLabel;
   }
 
-  return `${setupLabel} | stop ${formatPrice(setup?.stop)} | target ${formatPrice(setup?.target)}`;
+  return `${setupLabel} | 15m SL ${formatPrice(setup?.stop)} | target ${formatPrice(setup?.target)}`;
 }
 
 function buildPill(label, extraClass = "") {
@@ -209,7 +218,10 @@ function buildReadinessPill(label, extraClass = "") {
 
 function buildScoreTooltip(row) {
   const totalWeight = Object.values(TIMEFRAME_WEIGHTS).reduce((sum, value) => sum + value, 0);
-  const lines = row.scoreBreakdown
+  const setupLines = (row.setupScoreBreakdown || [])
+    .map((item) => `${item.label}: ${item.score}/100 | ${item.detail}`)
+    .join("\n");
+  const biasLines = row.scoreBreakdown
     .map((item) => {
       const weight = TIMEFRAME_WEIGHTS[item.timeframe] || 1;
       const contribution = Math.round((item.score * weight) / totalWeight);
@@ -221,7 +233,7 @@ function buildScoreTooltip(row) {
     ? `Setup: ${formatSetupPlan(row)}`
     : "Setup: Potential not available yet";
 
-  return `Total score: ${row.score}/100\n${setupLine}\n${lines}`;
+  return `Score: ${row.score}/100\nBias: ${formatSignedScore(row.biasScore)}/100\n${setupLine}\n${setupLines}\nBias breakdown:\n${biasLines}`;
 }
 
 function applyScoreInfo(container, row) {
@@ -398,9 +410,9 @@ function renderSnapshot(payload) {
 
   els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
-    `Score uses EMA trend, RSI momentum, ADX strength, and price action on 15m, 1h, 4h, 12h, and 24h. Leader lists only show setups with at least ${minimumRatioLabel} potential.`;
+    `Score now blends bias strength, readiness, reward:risk, and 15m stop quality. Leader lists only show setups with at least ${minimumRatioLabel} potential using the last 15m candle as stop loss.`;
   els.rankingLegend.textContent =
-    `Bias timeframes: 15m, 1h, 4h, 12h, 24h. Search keeps the full ranked universe, while leader lists require minimum ${minimumRatioLabel} potential.`;
+    `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists require minimum ${minimumRatioLabel} potential with the latest 15m candle as stop loss.`;
   els.trackedPairs.textContent = String(breadth.tracked);
   els.bullishCount.textContent = String(breadth.bullish);
   els.bearishCount.textContent = String(breadth.bearish);
@@ -412,13 +424,13 @@ function renderSnapshot(payload) {
 
   els.strongestBullSymbol.textContent = strongestBull.symbol;
   els.strongestBullMeta.textContent =
-    `${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBull)} | Score ${strongestBull.score}`;
+    `${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBull)} | Score ${strongestBull.score} | Bias ${formatSignedScore(strongestBull.biasScore)}`;
   els.strongestBullBias.className = `bias-pill ${toneForLabel(strongestBull.bias)}`;
   els.strongestBullBias.textContent = strongestBull.bias;
 
   els.strongestBearSymbol.textContent = strongestBear.symbol;
   els.strongestBearMeta.textContent =
-    `${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBear)} | Score ${strongestBear.score}`;
+    `${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBear)} | Score ${strongestBear.score} | Bias ${formatSignedScore(strongestBear.biasScore)}`;
   els.strongestBearBias.className = `bias-pill ${toneForLabel(strongestBear.bias)}`;
   els.strongestBearBias.textContent = strongestBear.bias;
 
