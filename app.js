@@ -23,6 +23,7 @@ const els = {
   bearList: document.querySelector("#bear-list"),
   rankingList: document.querySelector("#ranking-list"),
   resultsNote: document.querySelector("#results-note"),
+  rankingLegend: document.querySelector(".ranking-legend span"),
   pairModal: document.querySelector("#pair-modal"),
   pairModalSymbol: document.querySelector("#pair-modal-symbol"),
   pairModalMeta: document.querySelector("#pair-modal-meta"),
@@ -145,6 +146,40 @@ function formatPrice(value) {
   return numeric.toLocaleString("en-US", { maximumFractionDigits: 8 });
 }
 
+function formatPotentialRatio(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "N/A";
+  }
+
+  return `1:${numeric.toFixed(Number.isInteger(numeric) ? 0 : 1)}`;
+}
+
+function formatSetupLabel(row, { includeSide = false } = {}) {
+  const setup = row?.setup;
+  const ratioLabel = formatPotentialRatio(setup?.ratio);
+  if (ratioLabel === "N/A") {
+    return "Potential N/A";
+  }
+
+  if (!includeSide) {
+    return `Potential ${ratioLabel}`;
+  }
+
+  const sideLabel = setup?.side === "short" ? "Short" : "Long";
+  return `${sideLabel} ${ratioLabel}`;
+}
+
+function formatSetupPlan(row) {
+  const setup = row?.setup;
+  const setupLabel = formatSetupLabel(row, { includeSide: true });
+  if (setupLabel === "Potential N/A") {
+    return setupLabel;
+  }
+
+  return `${setupLabel} | stop ${formatPrice(setup?.stop)} | target ${formatPrice(setup?.target)}`;
+}
+
 function buildPill(label, extraClass = "") {
   const span = document.createElement("span");
   span.className = `bias-pill ${toneForLabel(label)} ${extraClass}`.trim();
@@ -182,8 +217,11 @@ function buildScoreTooltip(row) {
       return `${item.timeframe}: ${item.score}/100 | weight ${weight} | contribution ${sign}${contribution}`;
     })
     .join("\n");
+  const setupLine = row.setup && formatPotentialRatio(row.setup.ratio) !== "N/A"
+    ? `Setup: ${formatSetupPlan(row)}`
+    : "Setup: Potential not available yet";
 
-  return `Total score: ${row.score}/100\n${lines}`;
+  return `Total score: ${row.score}/100\n${setupLine}\n${lines}`;
 }
 
 function applyScoreInfo(container, row) {
@@ -218,13 +256,23 @@ function renderMajorCards(rows) {
 
 function renderSignalList(container, rows) {
   container.textContent = "";
+  if (rows.length === 0) {
+    const emptyState = document.createElement("p");
+    const sideLabel = container === els.bullList ? "long" : "short";
+    emptyState.className = "signal-empty";
+    emptyState.textContent =
+      `No ${sideLabel} setups with at least ${formatPotentialRatio(state.payload?.minimumSetupRatio || 5)} potential right now.`;
+    container.appendChild(emptyState);
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
 
   for (const row of rows) {
     const item = els.signalRowTemplate.content.firstElementChild.cloneNode(true);
     item.querySelector(".signal-symbol").textContent = row.symbol;
     item.querySelector(".signal-meta").textContent =
-      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}%`;
+      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupLabel(row)}`;
     item.querySelector(".readiness-pill").replaceWith(buildReadinessPill(row.tradeReadiness));
     item.querySelector(".bias-pill").replaceWith(buildPill(row.bias));
     item.querySelector(".score-pill").textContent = `Score ${row.score}`;
@@ -245,7 +293,7 @@ function renderRankingList(rows) {
     item.querySelector(".rank-pill").textContent = `#${row.rank}`;
     item.querySelector(".ranking-symbol").textContent = row.symbol;
     item.querySelector(".ranking-meta").textContent =
-      `${row.description} | ${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}%`;
+      `${row.description} | ${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupLabel(row, { includeSide: true })}`;
 
     const timeframeShell = item.querySelector(".ranking-timeframes");
     for (const timeframe of ACTIVE_TIMEFRAMES) {
@@ -295,7 +343,7 @@ function renderSuggestions(query, rows) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "suggestion-item";
-    button.textContent = `${row.symbol} | ${row.tradeReadiness} | Score ${row.score}`;
+    button.textContent = `${row.symbol} | ${row.tradeReadiness} | ${formatSetupLabel(row, { includeSide: true })} | Score ${row.score}`;
     button.addEventListener("click", () => {
       els.searchInput.value = row.symbol;
       openPairModal(row);
@@ -322,7 +370,7 @@ function openPairModal(row) {
 
   els.pairModalSymbol.textContent = row.symbol;
   els.pairModalMeta.textContent =
-    `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}%`;
+    `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupPlan(row)}`;
   els.pairModalBias.className = `bias-pill ${toneForLabel(row.bias)}`;
   els.pairModalBias.textContent = row.bias;
   els.pairModalReadiness.replaceWith(buildReadinessPill(row.tradeReadiness));
@@ -344,12 +392,15 @@ function closePairModal() {
 }
 
 function renderSnapshot(payload) {
-  const { breadth, strongestBull, strongestBear, majors, leaders, generatedAt } = payload;
+  const { breadth, strongestBull, strongestBear, majors, leaders, generatedAt, minimumSetupRatio } = payload;
   state.payload = payload;
+  const minimumRatioLabel = formatPotentialRatio(minimumSetupRatio || 5);
 
   els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
-    "Score uses EMA trend, RSI momentum, ADX strength, and price action on 15m, 1h, 4h, 12h, and 24h. Shorter charts drive entries, longer charts confirm direction.";
+    `Score uses EMA trend, RSI momentum, ADX strength, and price action on 15m, 1h, 4h, 12h, and 24h. Leader lists only show setups with at least ${minimumRatioLabel} potential.`;
+  els.rankingLegend.textContent =
+    `Bias timeframes: 15m, 1h, 4h, 12h, 24h. Search keeps the full ranked universe, while leader lists require minimum ${minimumRatioLabel} potential.`;
   els.trackedPairs.textContent = String(breadth.tracked);
   els.bullishCount.textContent = String(breadth.bullish);
   els.bearishCount.textContent = String(breadth.bearish);
@@ -361,13 +412,13 @@ function renderSnapshot(payload) {
 
   els.strongestBullSymbol.textContent = strongestBull.symbol;
   els.strongestBullMeta.textContent =
-    `${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | Score ${strongestBull.score}`;
+    `${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBull)} | Score ${strongestBull.score}`;
   els.strongestBullBias.className = `bias-pill ${toneForLabel(strongestBull.bias)}`;
   els.strongestBullBias.textContent = strongestBull.bias;
 
   els.strongestBearSymbol.textContent = strongestBear.symbol;
   els.strongestBearMeta.textContent =
-    `${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | Score ${strongestBear.score}`;
+    `${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBear)} | Score ${strongestBear.score}`;
   els.strongestBearBias.className = `bias-pill ${toneForLabel(strongestBear.bias)}`;
   els.strongestBearBias.textContent = strongestBear.bias;
 
