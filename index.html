@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260403c">
+  <link rel="stylesheet" href="./styles.css?v=20260403d">
 </head>
 <body>
   <div class="page-shell">
@@ -122,25 +122,43 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Continuation Scanner</p>
-            <h3 class="ranking-title">5m + 15m BOS / CHoCH</h3>
+            <h3 class="ranking-title">5m And 15m Candle Data</h3>
           </div>
           <span id="continuation-legend" class="mini-note">
-            Waiting for aligned breakout and breakdown continuation candles.
+            Waiting for separate 5m and 15m breakout and breakdown candles.
           </span>
         </div>
         <div class="continuation-grid">
           <article class="panel list-panel continuation-card">
             <div class="panel-head">
-              <p class="eyebrow">Breakout Continuations</p>
+              <p class="eyebrow">5m Candle Data</p>
             </div>
-            <div id="continuation-long-list" class="signal-list"></div>
+            <div class="continuation-split-grid">
+              <div class="continuation-split-column">
+                <p class="eyebrow continuation-split-label">5m Breakouts</p>
+                <div id="continuation-5m-long-list" class="signal-list"></div>
+              </div>
+              <div class="continuation-split-column">
+                <p class="eyebrow continuation-split-label">5m Breakdowns</p>
+                <div id="continuation-5m-short-list" class="signal-list"></div>
+              </div>
+            </div>
           </article>
 
           <article class="panel list-panel continuation-card">
             <div class="panel-head">
-              <p class="eyebrow">Breakdown Continuations</p>
+              <p class="eyebrow">15m Candle Data</p>
             </div>
-            <div id="continuation-short-list" class="signal-list"></div>
+            <div class="continuation-split-grid">
+              <div class="continuation-split-column">
+                <p class="eyebrow continuation-split-label">15m Breakouts</p>
+                <div id="continuation-15m-long-list" class="signal-list"></div>
+              </div>
+              <div class="continuation-split-column">
+                <p class="eyebrow continuation-split-label">15m Breakdowns</p>
+                <div id="continuation-15m-short-list" class="signal-list"></div>
+              </div>
+            </div>
           </article>
         </div>
       </section>
@@ -257,6 +275,6 @@
     </article>
   </template>
 
-  <script type="module" src="./app.js?v=20260403c"></script>
+  <script type="module" src="./app.js?v=20260403d"></script>
 </body>
 </html>

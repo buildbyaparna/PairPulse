@@ -332,6 +332,22 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 244, 0.92));
 }
 
+.continuation-split-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.continuation-split-column {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.continuation-split-label {
+  margin-bottom: 0;
+}
+
 .list-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -453,11 +469,12 @@ body {
 .score-wrap::after {
   content: attr(data-tooltip);
   position: absolute;
-  left: 0;
+  left: auto;
+  right: 0;
   bottom: calc(100% + 10px);
   transform: translateY(6px);
   min-width: 260px;
-  max-width: 360px;
+  max-width: min(360px, calc(100vw - 24px));
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid rgba(22, 163, 74, 0.18);
@@ -790,6 +807,7 @@ body {
   .hero-highlights,
   .content-grid,
   .continuation-grid,
+  .continuation-split-grid,
   .meta-row {
     grid-template-columns: 1fr;
   }
