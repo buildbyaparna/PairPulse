@@ -428,7 +428,7 @@ function renderFrameContinuationList(container, rows, side, timeframe) {
   if (rows.length === 0) {
     const emptyState = document.createElement("p");
     emptyState.className = "signal-empty";
-    emptyState.textContent = `${timeframe} ${side === "long" ? "breakout" : "breakdown"} list has no pairs above the 3x consolidation-size filter right now.`;
+    emptyState.textContent = `${timeframe} ${side === "long" ? "breakout" : "breakdown"} list has no pairs with BOS yes, CHoCH yes, EMA 9/15 yes, and size above 3x right now.`;
     container.appendChild(emptyState);
     return;
   }
@@ -586,8 +586,8 @@ function renderSnapshot(payload) {
     `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Visible pair labels always show the active setup Risk:Reward, while leader lists still only show setups above ${minimumRatioLabel} potential with clean EMA 9/15 position, confirmed trend direction, and no exhaustion on the latest 15m candle.`;
   if (els.continuationLegend) {
     els.continuationLegend.textContent = frameContinuationCount
-      ? `Showing 5m and 15m candle data separately. Each list only includes pairs where that timeframe candle size is above 3x of its last consolidation base.`
-      : `No 5m or 15m candle currently passes the 3x consolidation-size filter on this snapshot.`;
+      ? `Showing 5m and 15m candle data separately. Each list only includes pairs where that timeframe has BOS yes, CHoCH yes, EMA 9/15 yes, and candle size above 3x of its last consolidation base.`
+      : `No 5m or 15m candle currently passes the BOS, CHoCH, EMA 9/15, and 3x consolidation-size filter on this snapshot.`;
   }
   els.rankingLegend.textContent =
     strictLongCount || strictShortCount
