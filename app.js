@@ -89,7 +89,7 @@ function getSearchRows(query) {
   }
 
   if (!query) {
-    return [...state.payload.allRows].sort((left, right) => left.rank - right.rank);
+    return [...state.payload.allRows];
   }
 
   return state.payload.allRows
@@ -99,7 +99,13 @@ function getSearchRows(query) {
       if (right.searchRank !== left.searchRank) {
         return right.searchRank - left.searchRank;
       }
-      return left.row.rank - right.row.rank;
+      if ((right.row.setup?.ratio ?? 0) !== (left.row.setup?.ratio ?? 0)) {
+        return (right.row.setup?.ratio ?? 0) - (left.row.setup?.ratio ?? 0);
+      }
+      if (right.row.score !== left.row.score) {
+        return right.row.score - left.row.score;
+      }
+      return Math.abs(right.row.biasScore) - Math.abs(left.row.biasScore);
     })
     .map((item) => item.row);
 }
@@ -165,22 +171,22 @@ function formatPotentialRatio(value) {
 function formatSetupLabel(row, { includeSide = false } = {}) {
   const setup = row?.setup;
   const ratioLabel = formatPotentialRatio(setup?.ratio);
-  if (ratioLabel === "N/A" || !setup?.qualifies) {
-    return "Potential N/A";
+  if (ratioLabel === "N/A") {
+    return "Risk:Reward N/A";
   }
 
   if (!includeSide) {
-    return `Potential ${ratioLabel}`;
+    return `Risk:Reward ${ratioLabel}`;
   }
 
   const sideLabel = setup?.side === "short" ? "Short" : "Long";
-  return `${sideLabel} ${ratioLabel}`;
+  return `${sideLabel} | Risk:Reward ${ratioLabel}`;
 }
 
 function formatSetupPlan(row) {
   const setup = row?.setup;
   const setupLabel = formatSetupLabel(row, { includeSide: true });
-  if (setupLabel === "Potential N/A") {
+  if (setupLabel === "Risk:Reward N/A") {
     return setupLabel;
   }
 
@@ -266,16 +272,12 @@ function buildReadinessPill(label, extraClass = "") {
 function buildScoreTooltip(row) {
   const checks = row.setup?.checks || [];
   const emaCheck = checks.find((item) => item.label === "EMA position");
-  const volumeCheck = checks.find((item) => item.label === "Volume");
   const trendCheck = checks.find((item) => item.label === "Trend");
   const exhaustionCheck = checks.find((item) => item.label === "Exhaustion");
-  const setupLine = row.setup && row.setup.qualifies && formatPotentialRatio(row.setup.ratio) !== "N/A"
-    ? `Setup: ${formatSetupPlan(row)}`
-    : "Setup: No qualified trend setup right now";
+  const setupLine = row.setup && formatPotentialRatio(row.setup?.ratio) !== "N/A"
+    ? `Setup: ${formatSetupPlan(row)}${row.setup.qualifies ? "" : " | blocked by trend filters"}`
+    : "Setup: Risk:Reward not available yet";
   const timeframeLine = `15m ${row.timeframes?.["15m"] || "N/A"} | 1h ${row.timeframes?.["1h"] || "N/A"} | 4h ${row.timeframes?.["4h"] || "N/A"}`;
-  const volumeLine = volumeCheck
-    ? `Volume: ${volumeCheck.passed ? "Pass" : "Fail"} | ${volumeCheck.detail}`
-    : "Volume: N/A";
   const trendLine = trendCheck
     ? `Trend: ${trendCheck.passed ? "Pass" : "Fail"} | ${trendCheck.detail}`
     : "Trend: N/A";
@@ -286,7 +288,7 @@ function buildScoreTooltip(row) {
     ? `Exhaustion: ${exhaustionCheck.passed ? "Pass" : "Fail"}`
     : "Exhaustion: N/A";
 
-  return `Score ${row.score}/100 | Bias ${formatSignedScore(row.biasScore)} | ${row.tradeReadiness}\n${setupLine}\n${timeframeLine}\n${trendLine}\n${volumeLine}\n${emaLine} | ${exhaustionLine}`;
+  return `Score ${row.score}/100 | Bias ${formatSignedScore(row.biasScore)} | ${row.tradeReadiness}\n${setupLine}\n${timeframeLine}\n${trendLine}\n${emaLine} | ${exhaustionLine}`;
 }
 
 function buildContinuationTooltip(row, side) {
@@ -352,8 +354,9 @@ function renderSignalList(container, rows) {
     return;
   }
 
+  const visibleRows = rows.slice(0, 5);
   container.textContent = "";
-  if (rows.length === 0) {
+  if (visibleRows.length === 0) {
     const emptyState = document.createElement("p");
     const sideLabel = container === els.bullList ? "long" : "short";
     emptyState.className = "signal-empty";
@@ -365,7 +368,7 @@ function renderSignalList(container, rows) {
 
   const fragment = document.createDocumentFragment();
 
-  for (const row of rows) {
+  for (const row of visibleRows) {
     const item = els.signalRowTemplate.content.firstElementChild.cloneNode(true);
     item.querySelector(".signal-symbol").textContent = row.symbol;
     item.querySelector(".signal-meta").textContent =
@@ -390,8 +393,8 @@ function renderContinuationList(container, rows, side) {
     const emptyState = document.createElement("p");
     emptyState.className = "signal-empty";
     emptyState.textContent = side === "long"
-      ? "No 5m + 15m breakout continuation with BOS, CHoCH, EMA 9/15, and volume confirmation right now."
-      : "No 5m + 15m breakdown continuation with BOS, CHoCH, EMA 9/15, and volume confirmation right now.";
+      ? "No 5m + 15m breakout continuation with BOS, CHoCH, and EMA 9/15 alignment right now."
+      : "No 5m + 15m breakdown continuation with BOS, CHoCH, and EMA 9/15 alignment right now.";
     container.appendChild(emptyState);
     return;
   }
@@ -455,7 +458,7 @@ function renderRankingList(rows) {
 
   for (const row of rows) {
     const item = els.rankingRowTemplate.content.firstElementChild.cloneNode(true);
-    item.querySelector(".rank-pill").textContent = `#${row.rank}`;
+    item.querySelector(".rank-pill").textContent = `#${fragment.childNodes.length + 1}`;
     item.querySelector(".ranking-symbol").textContent = row.symbol;
     item.querySelector(".ranking-meta").textContent =
       `${row.description} | ${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupLabel(row, { includeSide: true })}`;
@@ -580,7 +583,7 @@ function renderSnapshot(payload) {
 
   els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
-    `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Leader lists only show setups above ${minimumRatioLabel} potential, with strong relative volume, clean EMA 9/15 position, and no exhaustion on the latest 15m candle.`;
+    `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Visible pair labels always show the active setup Risk:Reward, while leader lists still only show setups above ${minimumRatioLabel} potential with clean EMA 9/15 position, confirmed trend direction, and no exhaustion on the latest 15m candle.`;
   if (els.continuationLegend) {
     els.continuationLegend.textContent = frameContinuationCount
       ? `Showing 5m and 15m candle data separately. Each list only includes pairs where that timeframe candle size is above 3x of its last consolidation base.`
@@ -588,8 +591,8 @@ function renderSnapshot(payload) {
   }
   els.rankingLegend.textContent =
     strictLongCount || strictShortCount
-      ? `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists now prefer clean 5m/15m continuation volume on top of support or resistance alignment, setups above ${minimumRatioLabel} potential, and a non-exhausted latest 15m candle.`
-      : `No setup passed every strict filter on this snapshot, so the best long and short setup panels are empty.`;
+      ? `Searchable pair ranking is sorted from highest to lowest active Risk:Reward. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists prefer clean 5m/15m continuation structure on top of support or resistance alignment, setups above ${minimumRatioLabel} potential, and a non-exhausted latest 15m candle.`
+      : `No setup passed every strict filter on this snapshot, so the best long and short setup panels are empty. Searchable pair ranking is still sorted from highest to lowest active Risk:Reward.`;
   els.trackedPairs.textContent = String(breadth.tracked);
   els.bullishCount.textContent = String(breadth.bullish);
   els.bearishCount.textContent = String(breadth.bearish);
