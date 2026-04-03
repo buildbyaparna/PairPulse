@@ -21,6 +21,9 @@ const els = {
   majorsGrid: document.querySelector("#majors-grid"),
   bullList: document.querySelector("#bull-list"),
   bearList: document.querySelector("#bear-list"),
+  continuationLegend: document.querySelector("#continuation-legend"),
+  continuationLongList: document.querySelector("#continuation-long-list"),
+  continuationShortList: document.querySelector("#continuation-short-list"),
   rankingList: document.querySelector("#ranking-list"),
   resultsNote: document.querySelector("#results-note"),
   rankingLegend: document.querySelector(".ranking-legend span"),
@@ -189,6 +192,32 @@ function formatSetupPlan(row) {
   return `${setupLabel} | 15m SL ${formatPrice(setup?.stop)} | target ${formatPrice(setup?.target)}`;
 }
 
+function formatVolumeMultiple(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "N/A";
+  }
+
+  return `${numeric.toFixed(2)}x`;
+}
+
+function getContinuation(row, side) {
+  return row?.continuations?.[side] || null;
+}
+
+function formatContinuationLabel(row, side) {
+  const continuation = getContinuation(row, side);
+  if (!continuation) {
+    return "No continuation scan";
+  }
+
+  const frame5 = continuation.frames?.["5m"];
+  const frame15 = continuation.frames?.["15m"];
+  const directionLabel = side === "short" ? "Breakdown" : "Breakout";
+
+  return `${directionLabel} | BOS + CHoCH | EMA 9/15 | 5m vol ${formatVolumeMultiple(frame5?.relativeVolume)} | 15m vol ${formatVolumeMultiple(frame15?.relativeVolume)} | room ${formatPotentialRatio(continuation?.ratio)}`;
+}
+
 function buildPill(label, extraClass = "") {
   const span = document.createElement("span");
   span.className = `bias-pill ${toneForLabel(label)} ${extraClass}`.trim();
@@ -221,6 +250,12 @@ function buildScoreTooltip(row) {
   const setupLines = (row.setupScoreBreakdown || [])
     .map((item) => `${item.label}: ${item.score}/100 | ${item.detail}`)
     .join("\n");
+  const setupChecks = (row.setup?.checks || [])
+    .map((item) => `${item.label}: ${item.passed ? "Pass" : "Fail"} | ${item.detail}`)
+    .join("\n");
+  const continuationChecks = (row.continuation?.checks || [])
+    .map((item) => `${item.label}: ${item.passed ? "Pass" : "Fail"} | ${item.detail}`)
+    .join("\n");
   const biasLines = row.scoreBreakdown
     .map((item) => {
       const weight = TIMEFRAME_WEIGHTS[item.timeframe] || 1;
@@ -232,13 +267,35 @@ function buildScoreTooltip(row) {
   const setupLine = row.setup && formatPotentialRatio(row.setup.ratio) !== "N/A"
     ? `Setup: ${formatSetupPlan(row)}`
     : "Setup: Potential not available yet";
+  const continuationLine = row.continuation
+    ? `Continuation: ${formatContinuationLabel(row, row.continuation.side)}`
+    : "Continuation: No aligned 5m + 15m continuation";
 
-  return `Score: ${row.score}/100\nBias: ${formatSignedScore(row.biasScore)}/100\n${setupLine}\n${setupLines}\nBias breakdown:\n${biasLines}`;
+  return `Score: ${row.score}/100\nBias: ${formatSignedScore(row.biasScore)}/100\n${setupLine}\n${continuationLine}\n${setupLines}\nSetup checks:\n${setupChecks}\nContinuation checks:\n${continuationChecks || "No continuation checks available"}\nBias breakdown:\n${biasLines}`;
 }
 
-function applyScoreInfo(container, row) {
+function buildContinuationTooltip(row, side) {
+  const continuation = getContinuation(row, side);
+  if (!continuation) {
+    return buildScoreTooltip(row);
+  }
+
+  const frameLines = ["5m", "15m"]
+    .map((timeframe) => {
+      const frame = continuation.frames?.[timeframe];
+      return `${timeframe}: ${frame?.detail || "No signal"} | vol ${formatVolumeMultiple(frame?.relativeVolume)}`;
+    })
+    .join("\n");
+  const checkLines = (continuation.checks || [])
+    .map((item) => `${item.label}: ${item.passed ? "Pass" : "Fail"} | ${item.detail}`)
+    .join("\n");
+
+  return `Continuation score: ${continuation.score}/100\nSide: ${side === "short" ? "Short" : "Long"}\nContinuation: ${formatContinuationLabel(row, side)}\nChecks:\n${checkLines}\nFrames:\n${frameLines}`;
+}
+
+function applyScoreInfo(container, row, tooltipOverride = null) {
   const wrap = container.querySelector(".score-wrap");
-  const tooltip = buildScoreTooltip(row);
+  const tooltip = tooltipOverride || buildScoreTooltip(row);
   wrap.setAttribute("data-tooltip", tooltip);
 }
 
@@ -289,6 +346,38 @@ function renderSignalList(container, rows) {
     item.querySelector(".bias-pill").replaceWith(buildPill(row.bias));
     item.querySelector(".score-pill").textContent = `Score ${row.score}`;
     applyScoreInfo(item, row);
+    fragment.appendChild(item);
+  }
+
+  container.appendChild(fragment);
+}
+
+function renderContinuationList(container, rows, side) {
+  container.textContent = "";
+  if (rows.length === 0) {
+    const emptyState = document.createElement("p");
+    emptyState.className = "signal-empty";
+    emptyState.textContent = side === "long"
+      ? "No 5m + 15m breakout continuation with BOS, CHoCH, EMA 9/15, and volume confirmation right now."
+      : "No 5m + 15m breakdown continuation with BOS, CHoCH, EMA 9/15, and volume confirmation right now.";
+    container.appendChild(emptyState);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  for (const row of rows) {
+    const continuation = getContinuation(row, side);
+    const item = els.signalRowTemplate.content.firstElementChild.cloneNode(true);
+    item.querySelector(".signal-symbol").textContent = row.symbol;
+    item.querySelector(".signal-meta").textContent =
+      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatContinuationLabel(row, side)}`;
+    item.querySelector(".readiness-pill").replaceWith(
+      buildReadinessPill(side === "long" ? "Long Continuation" : "Short Continuation"),
+    );
+    item.querySelector(".bias-pill").replaceWith(buildPill(row.bias));
+    item.querySelector(".score-pill").textContent = `Score ${continuation?.score ?? row.score}`;
+    applyScoreInfo(item, row, buildContinuationTooltip(row, side));
     fragment.appendChild(item);
   }
 
@@ -404,15 +493,26 @@ function closePairModal() {
 }
 
 function renderSnapshot(payload) {
-  const { breadth, strongestBull, strongestBear, majors, leaders, generatedAt, minimumSetupRatio } = payload;
+  const {
+    breadth,
+    strongestBull,
+    strongestBear,
+    majors,
+    leaders,
+    continuationLeaders,
+    generatedAt,
+    minimumSetupRatio,
+  } = payload;
   state.payload = payload;
   const minimumRatioLabel = formatPotentialRatio(minimumSetupRatio || 5);
 
   els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
-    `Score now blends bias strength, readiness, reward:risk, and 15m stop quality. Leader lists only show setups with at least ${minimumRatioLabel} potential using the last 15m candle as stop loss.`;
+    `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Leader lists only show setups with at least ${minimumRatioLabel} potential, strong relative volume, clean EMA position, and no exhaustion on the latest 15m candle.`;
+  els.continuationLegend.textContent =
+    `Scanner only shows pairs where both 5m and 15m candles print BOS + CHoCH from the EMA 9/15 zone, with higher volume and enough room for continuation.`;
   els.rankingLegend.textContent =
-    `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists require minimum ${minimumRatioLabel} potential with the latest 15m candle as stop loss.`;
+    `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists now prefer clean 5m/15m continuation volume on top of support or resistance alignment, minimum ${minimumRatioLabel} potential, and a non-exhausted latest 15m candle.`;
   els.trackedPairs.textContent = String(breadth.tracked);
   els.bullishCount.textContent = String(breadth.bullish);
   els.bearishCount.textContent = String(breadth.bearish);
@@ -437,6 +537,8 @@ function renderSnapshot(payload) {
   renderMajorCards(majors);
   renderSignalList(els.bullList, leaders.bulls);
   renderSignalList(els.bearList, leaders.bears);
+  renderContinuationList(els.continuationLongList, continuationLeaders?.longs || [], "long");
+  renderContinuationList(els.continuationShortList, continuationLeaders?.shorts || [], "short");
   applySearch();
 }
 

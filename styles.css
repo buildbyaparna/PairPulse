@@ -316,6 +316,22 @@ body {
   grid-template-columns: 1.25fr 1fr 1fr;
 }
 
+.continuation-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.continuation-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.continuation-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 244, 0.92));
+}
+
 .list-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -773,6 +789,7 @@ body {
   .hero-card,
   .hero-highlights,
   .content-grid,
+  .continuation-grid,
   .meta-row {
     grid-template-columns: 1fr;
   }

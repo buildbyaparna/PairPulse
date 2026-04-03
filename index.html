@@ -43,7 +43,7 @@
           <p class="eyebrow">Real-Time Ranking</p>
           <h2 id="hero-headline">Loading market bias...</h2>
           <p id="hero-subtext" class="hero-subtext">
-            Score uses EMA trend, RSI momentum, ADX strength, and price action on 15m, 1h, 4h, 12h, and 24h.
+            Score uses EMA trend, RSI momentum, ADX strength, price action, and 5m/15m continuation scans on live market data.
           </p>
         </div>
         <div class="search-shell">
@@ -116,6 +116,33 @@
           </div>
           <div id="bear-list" class="signal-list"></div>
         </article>
+      </section>
+
+      <section class="panel continuation-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Continuation Scanner</p>
+            <h3 class="ranking-title">5m + 15m BOS / CHoCH</h3>
+          </div>
+          <span id="continuation-legend" class="mini-note">
+            Waiting for aligned breakout and breakdown continuation candles.
+          </span>
+        </div>
+        <div class="continuation-grid">
+          <article class="panel list-panel continuation-card">
+            <div class="panel-head">
+              <p class="eyebrow">Breakout Continuations</p>
+            </div>
+            <div id="continuation-long-list" class="signal-list"></div>
+          </article>
+
+          <article class="panel list-panel continuation-card">
+            <div class="panel-head">
+              <p class="eyebrow">Breakdown Continuations</p>
+            </div>
+            <div id="continuation-short-list" class="signal-list"></div>
+          </article>
+        </div>
       </section>
 
       <section class="panel ranking-panel">
