@@ -294,7 +294,7 @@ function buildScoreTooltip(row) {
     ? `Exhaustion: ${exhaustionCheck.passed ? "Pass" : "Fail"}`
     : "Exhaustion: N/A";
 
-  return `Score ${row.score}/100 | Bias ${formatSignedScore(row.biasScore)} | ${row.tradeReadiness}\n${setupLine}\n${timeframeLine}\n${trendLine}\n${emaLine} | ${exhaustionLine}`;
+  return `Score ${row.score}/100 | ${row.tradeReadiness}\nDirection: ${row.bias} | ${timeframeLine}\n${setupLine}\n${trendLine}\n${emaLine} | ${exhaustionLine}`;
 }
 
 function buildTradeStatusHero({
