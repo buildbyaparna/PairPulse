@@ -43,13 +43,6 @@ const els = {
 };
 
 const ACTIVE_TIMEFRAMES = ["15m", "1h", "4h", "12h", "24h"];
-const TIMEFRAME_WEIGHTS = {
-  "15m": 4,
-  "1h": 5,
-  "4h": 3,
-  "12h": 2,
-  "24h": 1,
-};
 
 const state = {
   isLoading: false,
@@ -172,7 +165,7 @@ function formatPotentialRatio(value) {
 function formatSetupLabel(row, { includeSide = false } = {}) {
   const setup = row?.setup;
   const ratioLabel = formatPotentialRatio(setup?.ratio);
-  if (ratioLabel === "N/A") {
+  if (ratioLabel === "N/A" || !setup?.qualifies) {
     return "Potential N/A";
   }
 
@@ -271,32 +264,29 @@ function buildReadinessPill(label, extraClass = "") {
 }
 
 function buildScoreTooltip(row) {
-  const totalWeight = Object.values(TIMEFRAME_WEIGHTS).reduce((sum, value) => sum + value, 0);
-  const setupLines = (row.setupScoreBreakdown || [])
-    .map((item) => `${item.label}: ${item.score}/100 | ${item.detail}`)
-    .join("\n");
-  const setupChecks = (row.setup?.checks || [])
-    .map((item) => `${item.label}: ${item.passed ? "Pass" : "Fail"} | ${item.detail}`)
-    .join("\n");
-  const continuationChecks = (row.continuation?.checks || [])
-    .map((item) => `${item.label}: ${item.passed ? "Pass" : "Fail"} | ${item.detail}`)
-    .join("\n");
-  const biasLines = row.scoreBreakdown
-    .map((item) => {
-      const weight = TIMEFRAME_WEIGHTS[item.timeframe] || 1;
-      const contribution = Math.round((item.score * weight) / totalWeight);
-      const sign = contribution > 0 ? "+" : "";
-      return `${item.timeframe}: ${item.score}/100 | weight ${weight} | contribution ${sign}${contribution}`;
-    })
-    .join("\n");
-  const setupLine = row.setup && formatPotentialRatio(row.setup.ratio) !== "N/A"
+  const checks = row.setup?.checks || [];
+  const emaCheck = checks.find((item) => item.label === "EMA position");
+  const volumeCheck = checks.find((item) => item.label === "Volume");
+  const trendCheck = checks.find((item) => item.label === "Trend");
+  const exhaustionCheck = checks.find((item) => item.label === "Exhaustion");
+  const setupLine = row.setup && row.setup.qualifies && formatPotentialRatio(row.setup.ratio) !== "N/A"
     ? `Setup: ${formatSetupPlan(row)}`
-    : "Setup: Potential not available yet";
-  const continuationLine = row.continuation
-    ? `Continuation: ${formatContinuationLabel(row, row.continuation.side)}`
-    : "Continuation: No aligned 5m + 15m continuation";
+    : "Setup: No qualified trend setup right now";
+  const timeframeLine = `15m ${row.timeframes?.["15m"] || "N/A"} | 1h ${row.timeframes?.["1h"] || "N/A"} | 4h ${row.timeframes?.["4h"] || "N/A"}`;
+  const volumeLine = volumeCheck
+    ? `Volume: ${volumeCheck.passed ? "Pass" : "Fail"} | ${volumeCheck.detail}`
+    : "Volume: N/A";
+  const trendLine = trendCheck
+    ? `Trend: ${trendCheck.passed ? "Pass" : "Fail"} | ${trendCheck.detail}`
+    : "Trend: N/A";
+  const emaLine = emaCheck
+    ? `EMA 9/15: ${emaCheck.passed ? "Pass" : "Fail"}`
+    : "EMA 9/15: N/A";
+  const exhaustionLine = exhaustionCheck
+    ? `Exhaustion: ${exhaustionCheck.passed ? "Pass" : "Fail"}`
+    : "Exhaustion: N/A";
 
-  return `Score: ${row.score}/100\nBias: ${formatSignedScore(row.biasScore)}/100\n${setupLine}\n${continuationLine}\n${setupLines}\nSetup checks:\n${setupChecks}\nContinuation checks:\n${continuationChecks || "No continuation checks available"}\nBias breakdown:\n${biasLines}`;
+  return `Score ${row.score}/100 | Bias ${formatSignedScore(row.biasScore)} | ${row.tradeReadiness}\n${setupLine}\n${timeframeLine}\n${trendLine}\n${volumeLine}\n${emaLine} | ${exhaustionLine}`;
 }
 
 function buildContinuationTooltip(row, side) {
