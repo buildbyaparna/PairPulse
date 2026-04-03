@@ -133,6 +133,12 @@ function toneForLabel(label) {
   if (label.includes("Bear")) {
     return "bear";
   }
+  if (label.includes("Long")) {
+    return "bull";
+  }
+  if (label.includes("Short")) {
+    return "bear";
+  }
   return "neutral";
 }
 
@@ -561,6 +567,7 @@ function closePairModal() {
 
 function renderSnapshot(payload) {
   const {
+    headline,
     breadth,
     strongestBull,
     strongestBear,
@@ -581,7 +588,7 @@ function renderSnapshot(payload) {
     Number(signalDiagnostics?.frameContinuation15mLongCount || 0) +
     Number(signalDiagnostics?.frameContinuation15mShortCount || 0);
 
-  els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
+  els.heroHeadline.textContent = headline || `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
     `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Visible pair labels always show the active setup Risk:Reward, while leader lists still only show setups above ${minimumRatioLabel} potential with clean EMA 9/15 position, confirmed trend direction, and no exhaustion on the latest 15m candle.`;
   if (els.continuationLegend) {
@@ -603,16 +610,20 @@ function renderSnapshot(payload) {
   });
 
   els.strongestBullSymbol.textContent = strongestBull.symbol;
-  els.strongestBullMeta.textContent =
-    `${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBull)} | Score ${strongestBull.score} | Bias ${formatSignedScore(strongestBull.biasScore)}`;
-  els.strongestBullBias.className = `bias-pill ${toneForLabel(strongestBull.bias)}`;
-  els.strongestBullBias.textContent = strongestBull.bias;
+  els.strongestBullMeta.textContent = strongestBull.featuredUnavailable
+    ? strongestBull.featuredReason
+    : `${strongestBull.tradeReadiness} | ${strongestBull.trend} | ${formatPrice(strongestBull.price)} | 24h ${Number(strongestBull.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBull)} | Score ${strongestBull.score} | Bias ${formatSignedScore(strongestBull.biasScore)}`;
+  const strongestBullPill = strongestBull.featuredUnavailable ? "No Setup" : (strongestBull.tradeReadiness || strongestBull.bias);
+  els.strongestBullBias.className = `bias-pill ${toneForLabel(strongestBullPill)}`;
+  els.strongestBullBias.textContent = strongestBullPill;
 
   els.strongestBearSymbol.textContent = strongestBear.symbol;
-  els.strongestBearMeta.textContent =
-    `${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBear)} | Score ${strongestBear.score} | Bias ${formatSignedScore(strongestBear.biasScore)}`;
-  els.strongestBearBias.className = `bias-pill ${toneForLabel(strongestBear.bias)}`;
-  els.strongestBearBias.textContent = strongestBear.bias;
+  els.strongestBearMeta.textContent = strongestBear.featuredUnavailable
+    ? strongestBear.featuredReason
+    : `${strongestBear.tradeReadiness} | ${strongestBear.trend} | ${formatPrice(strongestBear.price)} | 24h ${Number(strongestBear.change24h || 0).toFixed(2)}% | ${formatSetupLabel(strongestBear)} | Score ${strongestBear.score} | Bias ${formatSignedScore(strongestBear.biasScore)}`;
+  const strongestBearPill = strongestBear.featuredUnavailable ? "No Setup" : (strongestBear.tradeReadiness || strongestBear.bias);
+  els.strongestBearBias.className = `bias-pill ${toneForLabel(strongestBearPill)}`;
+  els.strongestBearBias.textContent = strongestBearPill;
 
   renderMajorCards(majors);
   renderSignalList(els.bullList, leaders.bulls);
