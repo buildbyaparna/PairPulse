@@ -297,6 +297,47 @@ function buildScoreTooltip(row) {
   return `Score ${row.score}/100 | Bias ${formatSignedScore(row.biasScore)} | ${row.tradeReadiness}\n${setupLine}\n${timeframeLine}\n${trendLine}\n${emaLine} | ${exhaustionLine}`;
 }
 
+function buildTradeStatusHero({
+  strongestBull,
+  strongestBear,
+  minimumRatioLabel,
+}) {
+  const hasReadyLong = !strongestBull?.featuredUnavailable && strongestBull?.tradeReadiness === "Ready Long";
+  const hasReadyShort = !strongestBear?.featuredUnavailable && strongestBear?.tradeReadiness === "Ready Short";
+  const longRatioLabel = formatPotentialRatio(strongestBull?.setup?.ratio);
+  const shortRatioLabel = formatPotentialRatio(strongestBear?.setup?.ratio);
+
+  if (hasReadyLong && hasReadyShort) {
+    const focusSide = (Number(strongestBull?.setup?.ratio || 0) >= Number(strongestBear?.setup?.ratio || 0)) ? "long" : "short";
+    const focusSymbol = focusSide === "long" ? strongestBull.symbol : strongestBear.symbol;
+    const focusRatio = focusSide === "long" ? longRatioLabel : shortRatioLabel;
+
+    return {
+      headline: "Ready To Trade",
+      subtext: `Ready long in ${strongestBull.symbol} at ${longRatioLabel}. Ready short in ${strongestBear.symbol} at ${shortRatioLabel}. Focus on ${focusSymbol} first because it has the higher Risk:Reward ${focusRatio}.`,
+    };
+  }
+
+  if (hasReadyLong) {
+    return {
+      headline: "Longs Favored",
+      subtext: `A ready long setup is live in ${strongestBull.symbol} at ${longRatioLabel}. Long side is cleaner right now. Wait for shorts to regain one-way trend, BOS + CHoCH, EMA 9/15 alignment, and Risk:Reward above ${minimumRatioLabel}.`,
+    };
+  }
+
+  if (hasReadyShort) {
+    return {
+      headline: "Shorts Favored",
+      subtext: `A ready short setup is live in ${strongestBear.symbol} at ${shortRatioLabel}. Short side is cleaner right now. Wait for longs to regain one-way trend, BOS + CHoCH, EMA 9/15 alignment, and Risk:Reward above ${minimumRatioLabel}.`,
+    };
+  }
+
+  return {
+    headline: "No Trade Right Now",
+    subtext: `No clean ready setup is live. Wait for a one-way trend with BOS + CHoCH, price on the correct side of EMA 9/15, and Risk:Reward above ${minimumRatioLabel}.`,
+  };
+}
+
 function buildContinuationTooltip(row, side) {
   const continuation = getContinuation(row, side);
   if (!continuation) {
@@ -567,7 +608,6 @@ function closePairModal() {
 
 function renderSnapshot(payload) {
   const {
-    headline,
     breadth,
     strongestBull,
     strongestBear,
@@ -587,10 +627,14 @@ function renderSnapshot(payload) {
     Number(signalDiagnostics?.frameContinuation5mShortCount || 0) +
     Number(signalDiagnostics?.frameContinuation15mLongCount || 0) +
     Number(signalDiagnostics?.frameContinuation15mShortCount || 0);
+  const heroStatus = buildTradeStatusHero({
+    strongestBull,
+    strongestBear,
+    minimumRatioLabel,
+  });
 
-  els.heroHeadline.textContent = headline || `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
-  els.heroSubtext.textContent =
-    `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Visible pair labels always show the active setup Risk:Reward, while leader lists still only show setups above ${minimumRatioLabel} potential with clean EMA 9/15 position, confirmed trend direction, and no exhaustion on the latest 15m candle.`;
+  els.heroHeadline.textContent = heroStatus.headline;
+  els.heroSubtext.textContent = heroStatus.subtext;
   if (els.continuationLegend) {
     els.continuationLegend.textContent = frameContinuationCount
       ? `Showing 5m and 15m candle data separately. Each list only includes pairs where that timeframe has BOS yes, CHoCH yes, EMA 9/15 yes, and candle size above 3x of its last consolidation base.`
