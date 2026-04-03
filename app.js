@@ -201,6 +201,15 @@ function formatVolumeMultiple(value) {
   return `${numeric.toFixed(2)}x`;
 }
 
+function formatSignalMultiple(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "N/A";
+  }
+
+  return `${numeric.toFixed(2)}x`;
+}
+
 function getContinuation(row, side) {
   return row?.continuations?.[side] || null;
 }
@@ -219,7 +228,7 @@ function formatContinuationLabel(row, side) {
   const frame15 = continuation.frames?.["15m"];
   const directionLabel = side === "short" ? "Breakdown" : "Breakout";
 
-  return `${directionLabel} | BOS + CHoCH | EMA 9/15 | 5m vol ${formatVolumeMultiple(frame5?.relativeVolume)} | 15m vol ${formatVolumeMultiple(frame15?.relativeVolume)} | room ${formatPotentialRatio(continuation?.ratio)}`;
+  return `${directionLabel} | BOS + CHoCH | EMA 9/15 | 5m size ${formatSignalMultiple(frame5?.expansionMultiple)} | 15m size ${formatSignalMultiple(frame15?.expansionMultiple)} | 5m vol ${formatVolumeMultiple(frame5?.relativeVolume)} | 15m vol ${formatVolumeMultiple(frame15?.relativeVolume)} | room ${formatPotentialRatio(continuation?.ratio)}`;
 }
 
 function buildPill(label, extraClass = "") {
@@ -528,8 +537,8 @@ function renderSnapshot(payload) {
     `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Leader lists only show setups with at least ${minimumRatioLabel} potential, strong relative volume, clean EMA position, and no exhaustion on the latest 15m candle.`;
   if (els.continuationLegend) {
     els.continuationLegend.textContent = strictContinuationLongCount || strictContinuationShortCount
-      ? `Showing fully aligned 5m and 15m BOS + CHoCH candles from the EMA 9/15 zone, backed by volume and room for continuation.`
-      : `No fully confirmed 5m + 15m continuation candles right now, so this section falls back to the closest watchlist candidates.`;
+      ? `Showing only pairs where both 5m and 15m signal size is above 3x of the last consolidation base, alongside BOS + CHoCH, EMA 9/15, and volume.`
+      : `No pair currently has both 5m and 15m signal size above 3x of the last consolidation base, so this section may stay empty.`;
   }
   els.rankingLegend.textContent =
     strictLongCount || strictShortCount
