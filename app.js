@@ -205,6 +205,10 @@ function getContinuation(row, side) {
   return row?.continuations?.[side] || null;
 }
 
+function buildSignalNote(note) {
+  return note ? ` | ${note}` : "";
+}
+
 function formatContinuationLabel(row, side) {
   const continuation = getContinuation(row, side);
   if (!continuation) {
@@ -324,6 +328,10 @@ function renderMajorCards(rows) {
 }
 
 function renderSignalList(container, rows) {
+  if (!container) {
+    return;
+  }
+
   container.textContent = "";
   if (rows.length === 0) {
     const emptyState = document.createElement("p");
@@ -341,7 +349,7 @@ function renderSignalList(container, rows) {
     const item = els.signalRowTemplate.content.firstElementChild.cloneNode(true);
     item.querySelector(".signal-symbol").textContent = row.symbol;
     item.querySelector(".signal-meta").textContent =
-      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupLabel(row)}`;
+      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatSetupLabel(row)}${buildSignalNote(row.leaderNote)}`;
     item.querySelector(".readiness-pill").replaceWith(buildReadinessPill(row.tradeReadiness));
     item.querySelector(".bias-pill").replaceWith(buildPill(row.bias));
     item.querySelector(".score-pill").textContent = `Score ${row.score}`;
@@ -353,6 +361,10 @@ function renderSignalList(container, rows) {
 }
 
 function renderContinuationList(container, rows, side) {
+  if (!container) {
+    return;
+  }
+
   container.textContent = "";
   if (rows.length === 0) {
     const emptyState = document.createElement("p");
@@ -371,9 +383,9 @@ function renderContinuationList(container, rows, side) {
     const item = els.signalRowTemplate.content.firstElementChild.cloneNode(true);
     item.querySelector(".signal-symbol").textContent = row.symbol;
     item.querySelector(".signal-meta").textContent =
-      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatContinuationLabel(row, side)}`;
+      `${row.trend} | ${formatPrice(row.price)} | 24h ${Number(row.change24h || 0).toFixed(2)}% | ${formatContinuationLabel(row, side)}${buildSignalNote(row.continuationNote)}`;
     item.querySelector(".readiness-pill").replaceWith(
-      buildReadinessPill(side === "long" ? "Long Continuation" : "Short Continuation"),
+      buildReadinessPill(row.tradeReadiness || (side === "long" ? "Long Continuation" : "Short Continuation")),
     );
     item.querySelector(".bias-pill").replaceWith(buildPill(row.bias));
     item.querySelector(".score-pill").textContent = `Score ${continuation?.score ?? row.score}`;
@@ -500,19 +512,29 @@ function renderSnapshot(payload) {
     majors,
     leaders,
     continuationLeaders,
+    signalDiagnostics,
     generatedAt,
     minimumSetupRatio,
   } = payload;
   state.payload = payload;
   const minimumRatioLabel = formatPotentialRatio(minimumSetupRatio || 5);
+  const strictLongCount = Number(signalDiagnostics?.strictLongCount || 0);
+  const strictShortCount = Number(signalDiagnostics?.strictShortCount || 0);
+  const strictContinuationLongCount = Number(signalDiagnostics?.strictContinuationLongCount || 0);
+  const strictContinuationShortCount = Number(signalDiagnostics?.strictContinuationShortCount || 0);
 
   els.heroHeadline.textContent = `${strongestBull.symbol} leads. ${strongestBear.symbol} lags.`;
   els.heroSubtext.textContent =
     `Score now blends bias strength, readiness, reward:risk, setup quality, and 5m/15m continuation confirmation. Leader lists only show setups with at least ${minimumRatioLabel} potential, strong relative volume, clean EMA position, and no exhaustion on the latest 15m candle.`;
-  els.continuationLegend.textContent =
-    `Scanner only shows pairs where both 5m and 15m candles print BOS + CHoCH from the EMA 9/15 zone, with higher volume and enough room for continuation.`;
+  if (els.continuationLegend) {
+    els.continuationLegend.textContent = strictContinuationLongCount || strictContinuationShortCount
+      ? `Showing fully aligned 5m and 15m BOS + CHoCH candles from the EMA 9/15 zone, backed by volume and room for continuation.`
+      : `No fully confirmed 5m + 15m continuation candles right now, so this section falls back to the closest watchlist candidates.`;
+  }
   els.rankingLegend.textContent =
-    `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists now prefer clean 5m/15m continuation volume on top of support or resistance alignment, minimum ${minimumRatioLabel} potential, and a non-exhausted latest 15m candle.`;
+    strictLongCount || strictShortCount
+      ? `Ranking uses composite setup score. Bias still comes from 15m, 1h, 4h, 12h, and 24h, while leader lists now prefer clean 5m/15m continuation volume on top of support or resistance alignment, minimum ${minimumRatioLabel} potential, and a non-exhausted latest 15m candle.`
+      : `No setup passed every strict filter on this snapshot, so the long/short cards are showing the strongest watchlist candidates with the missing checks called out inline.`;
   els.trackedPairs.textContent = String(breadth.tracked);
   els.bullishCount.textContent = String(breadth.bullish);
   els.bearishCount.textContent = String(breadth.bearish);
